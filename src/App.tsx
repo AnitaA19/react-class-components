@@ -1,122 +1,149 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { Component } from "react";
+import type { ProductItem } from "./types";
+import CrashTester from "./components/CrashTester";
+import Header from "./components/Header";
+import SearchSection from "./components/SearchSection";
+import MainSection from "./components/MainSection";
+import { fetchProducts, PAGE_SIZE } from "./services/productApi";
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+interface AppState {
+  searchInput: string;
+  lastSubmittedTerm: string;
+  items: ProductItem[];
+  currentPage: number;
+  totalPages: number;
+  isLoading: boolean;
+  errorMessage: string | null;
+  triggerCrash: boolean;
 }
 
-export default App
+const SEARCH_STORAGE_KEY = "search-app-last-term";
+
+class App extends Component<object, AppState> {
+  state: AppState = {
+    searchInput: "",
+    lastSubmittedTerm: "",
+    items: [],
+    currentPage: 1,
+    totalPages: 1,
+    isLoading: false,
+    errorMessage: null,
+    triggerCrash: false,
+  };
+
+  componentDidMount() {
+    const savedTerm = localStorage.getItem(SEARCH_STORAGE_KEY) ?? "";
+    this.setState(
+      {
+        searchInput: savedTerm,
+        lastSubmittedTerm: savedTerm,
+      },
+      () => {
+        void this.loadItems(savedTerm, 1);
+      },
+    );
+  }
+
+  private loadItems = async (term: string, page: number) => {
+    this.setState({ isLoading: true, errorMessage: null });
+
+    try {
+      const response = await fetchProducts(term, page);
+      const totalPages = Math.max(1, Math.ceil(response.total / PAGE_SIZE));
+
+      this.setState({
+        items: response.items,
+        currentPage: page,
+        totalPages,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something unexpected happened while loading.";
+      this.setState({ errorMessage: message, items: [] });
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  };
+
+  private handleSearchInputChange = (value: string) => {
+    this.setState({ searchInput: value });
+  };
+
+  private handleSearchClick = () => {
+    const trimmedTerm = this.state.searchInput.trim();
+
+    if (trimmedTerm === this.state.lastSubmittedTerm) {
+      return;
+    }
+
+    localStorage.setItem(SEARCH_STORAGE_KEY, trimmedTerm);
+    this.setState(
+      {
+        searchInput: trimmedTerm,
+        lastSubmittedTerm: trimmedTerm,
+      },
+      () => {
+        void this.loadItems(trimmedTerm, 1);
+      },
+    );
+  };
+
+  private handlePageChange = (nextPage: number) => {
+    const { totalPages, lastSubmittedTerm, currentPage } = this.state;
+    if (nextPage < 1 || nextPage > totalPages || nextPage === currentPage) {
+      return;
+    }
+
+    void this.loadItems(lastSubmittedTerm, nextPage);
+  };
+
+  private handleCrashButtonClick = () => {
+    this.setState({ triggerCrash: true });
+  };
+
+  render() {
+    const {
+      searchInput,
+      items,
+      currentPage,
+      totalPages,
+      isLoading,
+      errorMessage,
+      triggerCrash,
+    } = this.state;
+
+    return (
+      <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8">
+        {triggerCrash ? <CrashTester /> : null}
+        <Header />
+        <SearchSection
+          value={searchInput}
+          isLoading={isLoading}
+          onSearchInputChange={this.handleSearchInputChange}
+          onSearchClick={this.handleSearchClick}
+        />
+        <MainSection
+          items={items}
+          isLoading={isLoading}
+          error={errorMessage}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={this.handlePageChange}
+        />
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+            onClick={this.handleCrashButtonClick}
+          >
+            Error Button
+          </button>
+        </div>
+      </main>
+    );
+  }
+}
+
+export default App;
