@@ -33,7 +33,9 @@ describe("MainSection", () => {
     render(<MainSection {...baseProps} />);
 
     expect(screen.getByRole("heading", { name: "Phone" })).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "Pagination" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "Pagination" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("1 items")).toBeInTheDocument();
   });
 });

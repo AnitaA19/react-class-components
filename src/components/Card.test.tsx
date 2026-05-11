@@ -15,6 +15,8 @@ describe("Card", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Phone" })).toBeInTheDocument();
-    expect(screen.getByText("A smartphone with great camera")).toBeInTheDocument();
+    expect(
+      screen.getByText("A smartphone with great camera"),
+    ).toBeInTheDocument();
   });
 });

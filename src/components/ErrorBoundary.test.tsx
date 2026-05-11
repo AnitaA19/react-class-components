@@ -37,7 +37,9 @@ describe("ErrorBoundary", () => {
 
   it("shows fallback UI and logs when child throws", async () => {
     const user = userEvent.setup();
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     render(
       <ErrorBoundary>
@@ -45,7 +47,9 @@ describe("ErrorBoundary", () => {
       </ErrorBoundary>,
     );
 
-    await user.click(screen.getByRole("button", { name: "Trigger child crash" }));
+    await user.click(
+      screen.getByRole("button", { name: "Trigger child crash" }),
+    );
 
     expect(screen.getByText("Something went wrong.")).toBeInTheDocument();
     expect(consoleErrorSpy).toHaveBeenCalled();

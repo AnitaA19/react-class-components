@@ -40,7 +40,13 @@ describe("App", () => {
   it("searches with trimmed term and saves it to localStorage", async () => {
     const user = userEvent.setup();
     mockedFetchProducts.mockResolvedValue({
-      items: [createProduct({ id: 2, name: "Laptop", description: "Laptop description" })],
+      items: [
+        createProduct({
+          id: 2,
+          name: "Laptop",
+          description: "Laptop description",
+        }),
+      ],
       total: 1,
     });
 
@@ -133,7 +139,9 @@ describe("App", () => {
 
   it("triggers error boundary fallback after clicking error button", async () => {
     const user = userEvent.setup();
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     mockedFetchProducts.mockResolvedValue({
       items: [],
       total: 0,
@@ -151,7 +159,9 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "Error Button" }));
 
-    expect(await screen.findByText("Something went wrong.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Something went wrong."),
+    ).toBeInTheDocument();
 
     consoleErrorSpy.mockRestore();
   });
