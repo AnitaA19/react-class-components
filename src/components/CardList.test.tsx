@@ -1,0 +1,25 @@
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import CardList from "./CardList";
+
+describe("CardList", () => {
+  it("shows empty state when no items", () => {
+    render(<CardList items={[]} />);
+
+    expect(screen.getByText("No products found")).toBeInTheDocument();
+  });
+
+  it("renders all items passed to the list", () => {
+    render(
+      <CardList
+        items={[
+          { id: 1, name: "Phone", description: "Phone description" },
+          { id: 2, name: "Laptop", description: "Laptop description" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Phone" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Laptop" })).toBeInTheDocument();
+  });
+});
