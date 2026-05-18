@@ -13,7 +13,7 @@ const AboutPage = () => (
       </p>
       <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
         <h3 className="text-sm font-semibold text-slate-900">Author</h3>
-        <p className="mt-2 text-sm text-slate-600">Bala Subramanian</p>
+        <p className="mt-2 text-sm text-slate-600">Anita Balasanyan</p>
         <p className="mt-1 text-sm text-slate-500">
           RS School student — React course
         </p>
