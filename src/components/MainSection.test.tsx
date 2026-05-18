@@ -9,7 +9,9 @@ describe("MainSection", () => {
     error: null,
     currentPage: 1,
     totalPages: 2,
+    selectedItemId: null,
     onPageChange: vi.fn(),
+    onItemSelect: vi.fn(),
   };
 
   it("shows loading indicator while loading", () => {

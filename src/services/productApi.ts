@@ -46,4 +46,22 @@ export const fetchProducts = async (
   };
 };
 
+export const fetchProductById = async (id: number): Promise<ProductItem> => {
+  const response = await fetch(`${API_BASE_URL}/products/${id}`);
+
+  if (!response.ok) {
+    throw new Error(
+      `Request failed with status ${response.status}. Please try again.`,
+    );
+  }
+
+  const product = (await response.json()) as DummyJsonProduct;
+
+  return {
+    id: product.id,
+    name: product.title,
+    description: product.description,
+  };
+};
+
 export { PAGE_SIZE };

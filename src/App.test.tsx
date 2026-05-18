@@ -1,22 +1,40 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useLocation } from "react-router-dom";
 import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { fetchProducts } from "./services/productApi";
+import { fetchProductById, fetchProducts } from "./services/productApi";
 import { createProduct } from "./test-utils/fixtures";
 import { renderWithProviders } from "./test-utils";
 
 vi.mock("./services/productApi", () => ({
   PAGE_SIZE: 12,
   fetchProducts: vi.fn(),
+  fetchProductById: vi.fn(),
 }));
 
 const mockedFetchProducts = vi.mocked(fetchProducts);
+const mockedFetchProductById = vi.mocked(fetchProductById);
+
+const LocationProbe = () => {
+  const { pathname, search } = useLocation();
+  return <span data-testid="router-location">{`${pathname}${search}`}</span>;
+};
+
+const renderApp = (route = "/?page=1") =>
+  renderWithProviders(
+    <>
+      <LocationProbe />
+      <App />
+    </>,
+    { route },
+  );
 
 describe("App", () => {
   beforeEach(() => {
     mockedFetchProducts.mockReset();
+    mockedFetchProductById.mockReset();
     localStorage.clear();
   });
 
@@ -27,7 +45,7 @@ describe("App", () => {
       total: 1,
     });
 
-    renderWithProviders(<App />);
+    renderApp("/?page=1");
 
     await waitFor(() => {
       expect(mockedFetchProducts).toHaveBeenCalledWith("phone", 1);
@@ -50,7 +68,7 @@ describe("App", () => {
       total: 1,
     });
 
-    renderWithProviders(<App />);
+    renderApp("/?page=1");
 
     await waitFor(() => {
       expect(mockedFetchProducts).toHaveBeenCalledWith("", 1);
@@ -74,7 +92,7 @@ describe("App", () => {
       total: 0,
     });
 
-    renderWithProviders(<App />);
+    renderApp("/?page=1");
 
     await waitFor(() => {
       expect(mockedFetchProducts).toHaveBeenCalledTimes(1);
@@ -96,7 +114,7 @@ describe("App", () => {
         total: 30,
       });
 
-    renderWithProviders(<App />);
+    renderApp("/?page=1");
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Next" })).toBeInTheDocument();
@@ -106,6 +124,93 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(mockedFetchProducts).toHaveBeenLastCalledWith("", 2);
+      expect(screen.getByTestId("router-location")).toHaveTextContent(
+        "/?page=2",
+      );
+      expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+    });
+  });
+
+  it("resets page to 1 in the URL when the search input changes", async () => {
+    const user = userEvent.setup();
+    mockedFetchProducts.mockResolvedValue({
+      items: [createProduct()],
+      total: 30,
+    });
+
+    renderApp("/?page=2");
+
+    await waitFor(() => {
+      expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+    });
+
+    const input = screen.getByLabelText("Search term");
+    await user.type(input, "a");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("router-location")).toHaveTextContent(
+        "/?page=1",
+      );
+    });
+  });
+
+  it("opens item details in the outlet and updates the URL", async () => {
+    const user = userEvent.setup();
+    const product = createProduct();
+    mockedFetchProducts.mockResolvedValue({
+      items: [product],
+      total: 1,
+    });
+    mockedFetchProductById.mockResolvedValue(product);
+
+    renderApp("/?page=1");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Phone" }),
+      ).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("heading", { name: "Phone" }));
+
+    const detailsPanel = await screen.findByLabelText("Item details");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("router-location")).toHaveTextContent(
+        "/details?page=1&details=1",
+      );
+    });
+
+    expect(
+      within(detailsPanel).getByRole("heading", { name: "Phone" }),
+    ).toBeInTheDocument();
+    expect(mockedFetchProductById).toHaveBeenCalledWith(1);
+  });
+
+  it("closes the details panel when the main results panel is clicked", async () => {
+    const user = userEvent.setup();
+    const product = createProduct();
+    mockedFetchProducts.mockResolvedValue({
+      items: [product],
+      total: 1,
+    });
+    mockedFetchProductById.mockResolvedValue(product);
+
+    renderApp("/details?page=1&details=1");
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Item details")).toBeInTheDocument();
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "Close details panel" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("router-location")).toHaveTextContent(
+        "/?page=1",
+      );
+      expect(screen.queryByLabelText("Item details")).not.toBeInTheDocument();
     });
   });
 
@@ -116,7 +221,7 @@ describe("App", () => {
       total: 30,
     });
 
-    renderWithProviders(<App />);
+    renderApp("/?page=1");
 
     await waitFor(() => {
       expect(mockedFetchProducts).toHaveBeenCalledTimes(1);
@@ -132,7 +237,7 @@ describe("App", () => {
   it("shows error message when API request fails", async () => {
     mockedFetchProducts.mockRejectedValue(new Error("API failed"));
 
-    renderWithProviders(<App />);
+    renderApp("/?page=1");
 
     expect(await screen.findByText("API failed")).toBeInTheDocument();
   });
@@ -151,6 +256,7 @@ describe("App", () => {
       <ErrorBoundary>
         <App />
       </ErrorBoundary>,
+      { route: "/?page=1" },
     );
 
     await waitFor(() => {
@@ -164,5 +270,31 @@ describe("App", () => {
     ).toBeInTheDocument();
 
     consoleErrorSpy.mockRestore();
+  });
+
+  it("renders about page from navigation link", async () => {
+    const user = userEvent.setup();
+    mockedFetchProducts.mockResolvedValue({ items: [], total: 0 });
+
+    renderApp("/?page=1");
+
+    await user.click(screen.getByRole("link", { name: "About" }));
+
+    expect(screen.getByRole("heading", { name: "About" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "RS School React course" }),
+    ).toHaveAttribute("href", "https://rs.school/react");
+  });
+
+  it("renders 404 page for unknown routes", () => {
+    mockedFetchProducts.mockResolvedValue({ items: [], total: 0 });
+
+    renderWithProviders(<App />, { route: "/unknown-route" });
+
+    expect(screen.getByText("Page not found")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to home" })).toHaveAttribute(
+      "href",
+      "/?page=1",
+    );
   });
 });

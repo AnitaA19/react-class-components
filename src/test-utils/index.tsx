@@ -1,9 +1,13 @@
 import type { ReactElement } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
-type ExtendedRenderOptions = Omit<RenderOptions, "queries">;
+interface ExtendedRenderOptions extends Omit<RenderOptions, "queries"> {
+  route?: string;
+}
 
 export const renderWithProviders = (
   ui: ReactElement,
-  options?: ExtendedRenderOptions,
-) => render(ui, options);
+  { route = "/?page=1", ...options }: ExtendedRenderOptions = {},
+) =>
+  render(<MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>, options);
