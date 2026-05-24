@@ -31,7 +31,7 @@ describe("downloadCsv", () => {
       href: "",
       download: "",
       click,
-    } as HTMLAnchorElement;
+    } as unknown as HTMLAnchorElement;
 
     const createElementSpy = vi
       .spyOn(document, "createElement")

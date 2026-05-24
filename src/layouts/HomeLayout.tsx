@@ -97,7 +97,9 @@ const HomeLayout = ({
             onCheckboxChange={onCheckboxChange}
             onOpenDetails={onOpenDetails}
             detailsItemId={
-              Number.isFinite(detailsItemId) && detailsItemId > 0
+              detailsItemId !== null &&
+              Number.isFinite(detailsItemId) &&
+              detailsItemId > 0
                 ? detailsItemId
                 : null
             }
