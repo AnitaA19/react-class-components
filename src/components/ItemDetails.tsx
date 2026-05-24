@@ -61,14 +61,16 @@ const ItemDetails = () => {
 
   return (
     <aside
-      className="flex h-full min-h-[320px] w-full flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:min-w-[280px] lg:max-w-sm"
+      className="flex h-full min-h-[320px] w-full flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 lg:min-w-[280px] lg:max-w-sm"
       aria-label="Item details"
     >
       <div className="mb-4 flex items-start justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-900">Details</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Details
+        </h2>
         <button
           type="button"
-          className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+          className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-700"
           onClick={handleClose}
           aria-label="Close details"
         >
@@ -90,9 +92,13 @@ const ItemDetails = () => {
       ) : null}
       {!isLoading && !error && item ? (
         <article className="flex-1">
-          <h3 className="text-xl font-semibold text-slate-900">{item.name}</h3>
-          <p className="mt-1 text-xs text-slate-500">ID: {item.id}</p>
-          <p className="mt-4 text-sm leading-7 text-slate-600">
+          <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+            {item.name}
+          </h3>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            ID: {item.id}
+          </p>
+          <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
             {item.description}
           </p>
         </article>

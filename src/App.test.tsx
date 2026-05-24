@@ -5,8 +5,13 @@ import { useLocation } from "react-router-dom";
 import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { fetchProductById, fetchProducts } from "./services/productApi";
+import {
+  isItemSelected,
+  useSelectedItemsStore,
+} from "./store/selectedItemsStore";
 import { createProduct } from "./test-utils/fixtures";
 import { renderWithProviders } from "./test-utils";
+import * as downloadCsv from "./utils/downloadCsv";
 
 vi.mock("./services/productApi", () => ({
   PAGE_SIZE: 12,
@@ -154,7 +159,7 @@ describe("App", () => {
     });
   });
 
-  it("opens item details in the outlet and updates the URL", async () => {
+  it("opens item details when the card is clicked outside the checkbox", async () => {
     const user = userEvent.setup();
     const product = createProduct();
     mockedFetchProducts.mockResolvedValue({
@@ -171,7 +176,9 @@ describe("App", () => {
       ).toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole("heading", { name: "Phone" }));
+    await user.click(
+      screen.getByRole("button", { name: "Open details for Phone" }),
+    );
 
     const detailsPanel = await screen.findByLabelText("Item details");
 
@@ -185,6 +192,137 @@ describe("App", () => {
       within(detailsPanel).getByRole("heading", { name: "Phone" }),
     ).toBeInTheDocument();
     expect(mockedFetchProductById).toHaveBeenCalledWith(1);
+  });
+
+  it("selects items with the checkbox without opening details", async () => {
+    const user = userEvent.setup();
+    const product = createProduct();
+    mockedFetchProducts.mockResolvedValue({
+      items: [product],
+      total: 1,
+    });
+
+    renderApp("/?page=1");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("checkbox", { name: "Select Phone" }),
+      ).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Phone" }));
+
+    expect(isItemSelected(useSelectedItemsStore.getState().itemsById, 1)).toBe(
+      true,
+    );
+    expect(screen.getByTestId("router-location")).toHaveTextContent("/?page=1");
+    expect(screen.queryByLabelText("Item details")).not.toBeInTheDocument();
+    expect(screen.getByText("1 item selected")).toBeInTheDocument();
+  });
+
+  it("keeps checkbox selections when navigating to another page", async () => {
+    const user = userEvent.setup();
+    mockedFetchProducts
+      .mockResolvedValueOnce({
+        items: [createProduct({ id: 1, name: "Phone" })],
+        total: 24,
+      })
+      .mockResolvedValueOnce({
+        items: [createProduct({ id: 13, name: "Tablet" })],
+        total: 24,
+      });
+
+    renderApp("/?page=1");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("checkbox", { name: "Select Phone" }),
+      ).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Phone" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("checkbox", { name: "Select Tablet" }),
+      ).toBeInTheDocument();
+    });
+
+    expect(isItemSelected(useSelectedItemsStore.getState().itemsById, 1)).toBe(
+      true,
+    );
+    expect(screen.getByText("1 item selected")).toBeInTheDocument();
+  });
+
+  it("persists selected items when navigating to About and back", async () => {
+    const user = userEvent.setup();
+    mockedFetchProducts.mockResolvedValue({
+      items: [createProduct()],
+      total: 1,
+    });
+
+    renderApp("/?page=1");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("checkbox", { name: "Select Phone" }),
+      ).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Phone" }));
+    await user.click(screen.getByRole("link", { name: "About" }));
+    expect(screen.getByText("1 item selected")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Back to search" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("checkbox", { name: "Select Phone" }),
+      ).toBeChecked();
+    });
+  });
+
+  it("clears selections and downloads csv from the flyout", async () => {
+    const user = userEvent.setup();
+    const downloadSpy = vi
+      .spyOn(downloadCsv, "downloadSelectedItemsCsv")
+      .mockImplementation(() => {});
+    mockedFetchProducts.mockResolvedValue({
+      items: [createProduct()],
+      total: 1,
+    });
+
+    renderApp("/?page=1");
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("checkbox", { name: "Select Phone" }),
+      ).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Phone" }));
+    await user.click(screen.getByRole("button", { name: "Download" }));
+
+    expect(downloadSpy).toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Unselect all" }));
+    expect(
+      screen.queryByLabelText("Selected items summary"),
+    ).not.toBeInTheDocument();
+
+    downloadSpy.mockRestore();
+  });
+
+  it("switches application theme from the header", async () => {
+    const user = userEvent.setup();
+    mockedFetchProducts.mockResolvedValue({ items: [], total: 0 });
+
+    renderApp("/?page=1");
+
+    await user.click(screen.getByRole("button", { name: "Dark" }));
+
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
   it("closes the details panel when the main results panel is clicked", async () => {
