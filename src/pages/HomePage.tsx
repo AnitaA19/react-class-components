@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import HomeLayout from "../layouts/HomeLayout";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { useSelectedItemsStore } from "../store/selectedItemsStore";
 import { fetchProducts, PAGE_SIZE } from "../services/productApi";
 import type { ProductItem } from "../types";
 
@@ -21,6 +22,7 @@ const HomePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [savedTerm, setSavedTerm] = useLocalStorage(SEARCH_STORAGE_KEY);
+  const toggleItem = useSelectedItemsStore((state) => state.toggleItem);
 
   const currentPage = parsePage(searchParams.get("page"));
 
@@ -151,7 +153,11 @@ const HomePage = () => {
     setSearchParams(params);
   };
 
-  const handleItemSelect = (id: number) => {
+  const handleCheckboxChange = (item: ProductItem) => {
+    toggleItem(item);
+  };
+
+  const handleOpenDetails = (id: number) => {
     navigate({
       pathname: "/details",
       search: `?page=${currentPage}&details=${id}`,
@@ -174,7 +180,8 @@ const HomePage = () => {
       onSearchInputChange={handleSearchInputChange}
       onSearchClick={handleSearchClick}
       onPageChange={handlePageChange}
-      onItemSelect={handleItemSelect}
+      onCheckboxChange={handleCheckboxChange}
+      onOpenDetails={handleOpenDetails}
       onCrashButtonClick={handleCrashButtonClick}
     />
   );

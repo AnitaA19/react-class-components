@@ -3,6 +3,11 @@ import CrashTester from "../components/CrashTester";
 import Header from "../components/Header";
 import SearchSection from "../components/SearchSection";
 import MainSection from "../components/MainSection";
+import SelectionFlyout from "../components/SelectionFlyout";
+import {
+  selectSelectedCount,
+  useSelectedItemsStore,
+} from "../store/selectedItemsStore";
 import type { ProductItem } from "../types";
 
 interface HomeLayoutProps {
@@ -16,7 +21,8 @@ interface HomeLayoutProps {
   onSearchInputChange: (value: string) => void;
   onSearchClick: () => void;
   onPageChange: (page: number) => void;
-  onItemSelect: (id: number) => void;
+  onCheckboxChange: (item: ProductItem) => void;
+  onOpenDetails: (id: number) => void;
   onCrashButtonClick: () => void;
 }
 
@@ -31,12 +37,18 @@ const HomeLayout = ({
   onSearchInputChange,
   onSearchClick,
   onPageChange,
-  onItemSelect,
+  onCheckboxChange,
+  onOpenDetails,
   onCrashButtonClick,
 }: HomeLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const isDetailsOpen = location.pathname === "/details";
+  const selectedCount = useSelectedItemsStore(selectSelectedCount);
+
+  const detailsItemId = isDetailsOpen
+    ? Number(new URLSearchParams(location.search).get("details"))
+    : null;
 
   const handleMainPanelClick = () => {
     if (!isDetailsOpen) {
@@ -49,7 +61,9 @@ const HomeLayout = ({
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8">
+    <main
+      className={`mx-auto min-h-screen w-full max-w-6xl px-4 py-8 ${selectedCount > 0 ? "pb-24" : ""}`}
+    >
       {triggerCrash ? <CrashTester /> : null}
       <Header />
       <SearchSection
@@ -80,10 +94,13 @@ const HomeLayout = ({
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={onPageChange}
-            onItemSelect={onItemSelect}
-            selectedItemId={
-              isDetailsOpen
-                ? Number(new URLSearchParams(location.search).get("details"))
+            onCheckboxChange={onCheckboxChange}
+            onOpenDetails={onOpenDetails}
+            detailsItemId={
+              detailsItemId !== null &&
+              Number.isFinite(detailsItemId) &&
+              detailsItemId > 0
+                ? detailsItemId
                 : null
             }
           />
@@ -97,12 +114,13 @@ const HomeLayout = ({
       <div className="mt-4 flex justify-end">
         <button
           type="button"
-          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
           onClick={onCrashButtonClick}
         >
           Error Button
         </button>
       </div>
+      <SelectionFlyout />
     </main>
   );
 };

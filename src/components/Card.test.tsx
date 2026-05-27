@@ -3,17 +3,21 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import Card from "./Card";
 
+const item = {
+  id: 5,
+  name: "Phone",
+  description: "A smartphone with great camera",
+};
+
 describe("Card", () => {
   it("renders product name and description", () => {
     render(
       <Card
-        item={{
-          id: 1,
-          name: "Phone",
-          description: "A smartphone with great camera",
-        }}
-        isSelected={false}
-        onSelect={vi.fn()}
+        item={item}
+        isChecked={false}
+        isDetailsActive={false}
+        onCheckboxChange={vi.fn()}
+        onOpenDetails={vi.fn()}
       />,
     );
 
@@ -23,45 +27,62 @@ describe("Card", () => {
     ).toBeInTheDocument();
   });
 
-  it("calls onSelect when clicked", async () => {
+  it("calls onCheckboxChange when checkbox is toggled", async () => {
     const user = userEvent.setup();
-    const onSelect = vi.fn();
+    const onCheckboxChange = vi.fn();
 
     render(
       <Card
-        item={{
-          id: 5,
-          name: "Phone",
-          description: "Description",
-        }}
-        isSelected={false}
-        onSelect={onSelect}
+        item={item}
+        isChecked={false}
+        isDetailsActive={false}
+        onCheckboxChange={onCheckboxChange}
+        onOpenDetails={vi.fn()}
       />,
     );
 
-    await user.click(screen.getByRole("button"));
-    expect(onSelect).toHaveBeenCalledWith(5);
+    await user.click(screen.getByRole("checkbox", { name: "Select Phone" }));
+    expect(onCheckboxChange).toHaveBeenCalledWith(item);
+    expect(onCheckboxChange).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onSelect when activated with the keyboard", async () => {
+  it("calls onOpenDetails when the card is clicked", async () => {
     const user = userEvent.setup();
-    const onSelect = vi.fn();
+    const onOpenDetails = vi.fn();
 
     render(
       <Card
-        item={{
-          id: 5,
-          name: "Phone",
-          description: "Description",
-        }}
-        isSelected={false}
-        onSelect={onSelect}
+        item={item}
+        isChecked={false}
+        isDetailsActive={false}
+        onCheckboxChange={vi.fn()}
+        onOpenDetails={onOpenDetails}
       />,
     );
 
-    screen.getByRole("button").focus();
+    await user.click(
+      screen.getByRole("button", { name: "Open details for Phone" }),
+    );
+    expect(onOpenDetails).toHaveBeenCalledWith(5);
+  });
+
+  it("opens details when activated with the keyboard", async () => {
+    const user = userEvent.setup();
+    const onOpenDetails = vi.fn();
+
+    render(
+      <Card
+        item={item}
+        isChecked={false}
+        isDetailsActive={false}
+        onCheckboxChange={vi.fn()}
+        onOpenDetails={onOpenDetails}
+      />,
+    );
+
+    screen.getByRole("button", { name: "Open details for Phone" }).focus();
     await user.keyboard("{Enter}");
 
-    expect(onSelect).toHaveBeenCalledWith(5);
+    expect(onOpenDetails).toHaveBeenCalledWith(5);
   });
 });
